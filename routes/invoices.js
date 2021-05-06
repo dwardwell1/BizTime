@@ -38,19 +38,56 @@ router.post('/', async (req, res, next) => {
 	}
 });
 
-router.patch('/:id', async (req, res, next) => {
+// router.put('/:id', async (req, res, next) => {
+// 	try {
+// 		const { comp_code, amt } = req.body;
+// 		const { id } = req.params;
+// 		const results = await db.query('UPDATE invoices SET comp_code=$1, amt=$2 WHERE id=$3 RETURNING *', [
+// 			comp_code,
+// 			amt,
+// 			id
+// 		]);
+// 		if (results.rows.length === 0) {
+// 			throw new ExpressError(`Can't find invoice with id of ${id}`, 404);
+// 		}
+// 		return res.send({ invoice: results.rows[0] });
+// 	} catch (e) {
+// 		return next(e);
+// 	}
+// });
+
+router.put('/:id', async (req, res, next) => {
 	try {
-		const { comp_code, amt } = req.body;
+		date = new Date();
+		const { amt, paid } = req.body;
 		const { id } = req.params;
-		const results = await db.query('UPDATE invoices SET comp_code=$1, amt=$2 WHERE id=$3 RETURNING *', [
-			comp_code,
-			amt,
-			id
-		]);
-		if (results.rows.length === 0) {
-			throw new ExpressError(`Can't find invoice with id of ${id}`, 404);
+		if (paid === true) {
+			const test = await db.query(`SELECT * FROM invoices WHERE id=$1`, [ req.params.id ]);
+			if (test.rows[0].paid == true) {
+				const results = await db.query('UPDATE invoices SET amt=$1 WHERE id=$2 RETURNING *', [ amt, id ]);
+				return res.send({ invoice: results.rows[0] });
+			}
+			const results = await db.query(
+				'UPDATE invoices SET amt=$1, paid_date = $2, paid=true  WHERE id=$3 RETURNING *',
+				[ amt, date, id ]
+			);
+			if (results.rows.length === 0) {
+				throw new ExpressError(`Can't find invoice with id of ${id}`, 404);
+			}
+			return res.send({ invoice: results.rows[0] });
 		}
-		return res.send({ invoice: results.rows[0] });
+		if (paid === false) {
+			const results = await db.query('UPDATE invoices SET amt=$1, paid_date = $2  WHERE id=$3 RETURNING *', [
+				amt,
+				null,
+				id
+			]);
+			if (results.rows.length === 0) {
+				throw new ExpressError(`Can't find invoice with id of ${id}`, 404);
+			}
+			return res.send({ invoice: results.rows[0] });
+		} else {
+		}
 	} catch (e) {
 		return next(e);
 	}
